@@ -1,4 +1,4 @@
-#Taglib.framework - ready for Obj-C
+#TagLib.framework - ready for Obj-C
 
 After spending a whole evening trying to make TagLib work in Obj-C I got it eventually, and I wanted to share a working framework project.
 
