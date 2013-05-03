@@ -79,6 +79,15 @@ RIFF::File::File(FileName file, Endianness endianness) : TagLib::File(file)
     read();
 }
 
+RIFF::File::File(IOStream *stream, Endianness endianness) : TagLib::File(stream)
+{
+  d = new FilePrivate;
+  d->endianness = endianness;
+
+  if(isOpen())
+    read();
+}
+
 TagLib::uint RIFF::File::riffSize() const
 {
   return d->size;
@@ -180,7 +189,7 @@ void RIFF::File::setChunkData(const ByteVector &name, const ByteVector &data)
     d->chunks[i].padding = 1;
     offset++;
   }
-  
+
   Chunk chunk;
   chunk.name = name;
   chunk.size = data.size();

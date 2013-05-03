@@ -27,8 +27,6 @@
 #include <config.h>
 #endif
 
-#ifdef WITH_ASF
-
 #include <tdebug.h>
 #include <tbytevectorlist.h>
 #include <tstring.h>
@@ -69,6 +67,9 @@ static ByteVector extendedContentDescriptionGuid("\x40\xA4\xD0\xD2\x07\xE3\xD2\x
 static ByteVector headerExtensionGuid("\xb5\x03\xbf_.\xa9\xcf\x11\x8e\xe3\x00\xc0\x0c Se", 16);
 static ByteVector metadataGuid("\xEA\xCB\xF8\xC5\xAF[wH\204g\xAA\214D\xFAL\xCA", 16);
 static ByteVector metadataLibraryGuid("\224\034#D\230\224\321I\241A\x1d\x13NEpT", 16);
+static ByteVector contentEncryptionGuid("\xFB\xB3\x11\x22\x23\xBD\xD2\x11\xB4\xB7\x00\xA0\xC9\x55\xFC\x6E", 16);
+static ByteVector extendedContentEncryptionGuid("\x14\xE6\x8A\x29\x22\x26 \x17\x4C\xB9\x35\xDA\xE0\x7E\xE9\x28\x9C", 16);
+static ByteVector advancedContentEncryptionGuid("\xB6\x9B\x07\x7A\xA4\xDA\x12\x4E\xA5\xCA\x91\xD3\x8D\xC1\x1A\x8D", 16);
 
 class ASF::File::BaseObject
 {
@@ -347,7 +348,7 @@ void ASF::File::HeaderExtensionObject::parse(ASF::File *file, uint /*size*/)
     else {
       obj = new UnknownObject(guid);
     }
-    obj->parse(file, size);
+    obj->parse(file, (unsigned int)size);
     objects.append(obj);
     dataPos += size;
   }
@@ -367,8 +368,15 @@ ByteVector ASF::File::HeaderExtensionObject::render(ASF::File *file)
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
-ASF::File::File(FileName file, bool readProperties, Properties::ReadStyle propertiesStyle) 
+ASF::File::File(FileName file, bool readProperties, Properties::ReadStyle propertiesStyle)
   : TagLib::File(file)
+{
+  d = new FilePrivate;
+  read(readProperties, propertiesStyle);
+}
+
+ASF::File::File(IOStream *stream, bool readProperties, Properties::ReadStyle propertiesStyle)
+  : TagLib::File(stream)
 {
   d = new FilePrivate;
   read(readProperties, propertiesStyle);
@@ -454,6 +462,11 @@ void ASF::File::read(bool /*readProperties*/, Properties::ReadStyle /*properties
       obj = new HeaderExtensionObject();
     }
     else {
+      if(guid == contentEncryptionGuid ||
+         guid == extendedContentEncryptionGuid ||
+         guid == advancedContentEncryptionGuid) {
+        d->properties->setEncrypted(true);
+      }
       obj = new UnknownObject(guid);
     }
     obj->parse(this, size);
@@ -522,7 +535,7 @@ bool ASF::File::save()
     data.append(d->objects[i]->render(this));
   }
   data = headerGuid + ByteVector::fromLongLong(data.size() + 30, false) + ByteVector::fromUInt(d->objects.size(), false) + ByteVector("\x01\x02", 2) + data;
-  insert(data, 0, d->size);
+  insert(data, 0, (TagLib::ulong)d->size);
 
   return true;
 }
@@ -600,4 +613,3 @@ ByteVector ASF::File::renderString(const String &str, bool includeLength)
   return data;
 }
 
-#endif
